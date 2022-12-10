@@ -1,0 +1,78 @@
+import pulp as p
+
+aantal_knooppunten = 33
+eerste_kp_Mad = 1
+eerste_kp_Ams = 10
+eerste_kp_Ber = 28
+
+knooppunten = [i+1 for i in range(aantal_knooppunten)]
+knooppunten_vliegtuigen= []
+
+def aantal_vliegtuigen_bij(knooppunt, vliegpijlen,Xfij):
+    x=0
+    for i in range(len(vliegpijlen)):
+        if vliegpijlen[i][1]==knooppunt:
+            x+=1
+    return x
+def aantal_vliegtuigen_af(knooppunt, vliegpijlen,Xfij):
+    x=0
+    for i in range(len(vliegpijlen)):
+        if vliegpijlen[i][0]==knooppunt:
+            x-=1
+    return x
+
+def vul_grondpijl():
+    grondpijlen= []
+    for i in range(aantal_knooppunten-1):
+        grondpijlen.append([(i+1),(i+2)])
+    return grondpijlen
+
+def varm_toevoegen(prob, f1):
+    for i in range(len(f1)):
+        prob.addVariable(f1[i])
+        prob += f1[i] <= 1
+    return  prob
+
+def constraints_toevoegen(prob, f1, f2):
+    for i in range(len(f1)):
+        prob+= f1[i]+f2[i] == 1
+    return prob
+
+
+pijlen_grond = vul_grondpijl()
+pijlen_vlucht = [[1,14],[3,18],[5,22],[7,24],[8,26],#ma
+                 [10,2],[13,4],[17,6],[21,8],[25,9],#am
+                 [11,29],[15,30],[19,31],[23,32],[26,33],#ab
+                 [28,12],[29,16],[30,20],[31,24],[32,27]]#ba
+
+Xf1_ij = p.LpVariable.matrix('XF1',pijlen_vlucht,cat = 'Bin')
+Xf2_ij = p.LpVariable.matrix('XF2',pijlen_vlucht,cat = 'Bin')
+
+Yf1_ij = p.LpVariable.matrix('YF1',pijlen_grond,0,cat = 'int')
+Yf2_ij = p.LpVariable.matrix('YF2',pijlen_grond,0,cat = 'int')
+
+
+
+
+
+prob = p.LpProblem('2a',p.LpMaximize)
+
+prob = varm_toevoegen(prob, Xf1_ij)
+prob = varm_toevoegen(prob, Xf2_ij)
+prob = varm_toevoegen(prob, Yf1_ij)
+prob = varm_toevoegen(prob, Yf2_ij)
+
+prob = constraints_toevoegen(prob,Xf1_ij,Xf2_ij)
+
+for i in range(eerste_kp_Ams-1):
+    prob+=Yf1_ij[i] == Yf1_ij[i-1]+aantal_vliegtuigen_bij(i,pijlen_vlucht,Yf1_ij)+aantal_vliegtuigen_af(i,pijlen_vlucht,Yf1_ij)
+
+obj = p.lpSum(Xf1_ij*10+10*Xf2_ij)
+prob+= obj
+prob.solve()
+print(Xf2_ij[0].value())
+print(p.value(Yf1_ij[2]))
+print(p.value(prob.objective))
+#print(pijlen_grond)
+#print(knooppunten)
+#Xf_ij = p.LpVariable.matrix(x, cat = 'Bin')
